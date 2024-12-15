@@ -51,7 +51,6 @@ for wav in "${wav_files[@]}"; do
     done
 done
 
-# Generate 16 PDF files using spectshow.py
 for wav in "${wav_files[@]}"; do
     for set in "${sets[@]}"; do
         ascii_file="${wav%.wav}.${set}.txt"
@@ -61,13 +60,11 @@ for wav in "${wav_files[@]}"; do
         echo "Generating PDF for $ascii_file -> $pdf_file"
 
         # Run spectshow.py to generate PDF
-        python3 spectshow.py "$wav" "$ascii_file" "$pdf_file" || { echo "Error generating $pdf_file"; exit 1; }
-
-        # Check if PDF file was generated
+        python spectshow.py "$wav" "$ascii_file" "$pdf_file" 2>>error.log
         if [[ -f "$pdf_file" ]]; then
             echo "Generated: $pdf_file"
         else
-            echo "Failed to generate: $pdf_file"; exit 1;
+            echo "Failed to generate: $pdf_file. Check error.log for details."
         fi
     done
 done

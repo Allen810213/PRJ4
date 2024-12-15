@@ -1,76 +1,62 @@
-import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
+import numpy as np
 import wave
 import sys
 
-def plot_waveform(wav_file, ax):
-    """
-    繪製波形圖。
-    :param wav_file: 輸入的 WAV 文件名
-    :param ax: Matplotlib 的軸對象
-    """
+def read_wav_file(wav_file):
+    """Read WAV file and return sample rate and audio data."""
     with wave.open(wav_file, 'r') as wav:
-        n_frames = wav.getnframes()
-        framerate = wav.getframerate()
-        data = wav.readframes(n_frames)
+        sample_rate = wav.getframerate()
+        num_frames = wav.getnframes()
+        audio_data = np.frombuffer(wav.readframes(num_frames), dtype=np.int16)
+    return sample_rate, audio_data
 
-        # 將數據轉換為 NumPy 陣列
-        waveform = np.frombuffer(data, dtype=np.int16)
-        time = np.linspace(0, n_frames / framerate, num=n_frames)
+def read_spectrogram_file(spectrogram_file):
+    """Read ASCII spectrogram data file and return 2D numpy array."""
+    with open(spectrogram_file, 'r') as f:
+        spectrogram_data = [list(map(float, line.strip().split())) for line in f]
+    return np.array(spectrogram_data)
 
-        ax.plot(time, waveform, color='blue')
-        ax.set_title(f"Waveform of {wav_file}")
-        ax.set_xlabel("Time (s)")
-        ax.set_ylabel("Amplitude")
+def plot_waveform(sample_rate, audio_data, ax):
+    """Plot waveform on the provided axes."""
+    time_axis = np.linspace(0, len(audio_data) / sample_rate, num=len(audio_data))
+    ax.plot(time_axis, audio_data, color='blue')
+    ax.set_title("Waveform")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Amplitude")
 
-def plot_spectrogram(txt_file, ax):
-    """
-    繪製頻譜圖。
-    :param txt_file: 輸入的 ASCII 頻譜數據文件
-    :param ax: Matplotlib 的軸對象
-    """
-    try:
-        # 加載 ASCII 文件並轉換為 NumPy 陣列
-        spectrum = np.loadtxt(txt_file)
-        ax.imshow(spectrum.T, aspect='auto', origin='lower', cmap='viridis')
-        ax.set_title(f"Spectrogram of {txt_file}")
-        ax.set_xlabel("Time Frame")
-        ax.set_ylabel("Frequency Bin")
+def plot_spectrogram(spectrogram_data, ax):
+    """Plot spectrogram on the provided axes."""
+    ax.imshow(spectrogram_data, aspect='auto', origin='lower', cmap='viridis', extent=[0, spectrogram_data.shape[1], 0, spectrogram_data.shape[0]])
+    ax.set_title("Spectrogram")
+    ax.set_xlabel("Frequency Bins")
+    ax.set_ylabel("Time Frames")
 
-        # 添加顏色條
-        cbar = plt.colorbar(ax.images[0], ax=ax, orientation='vertical')
-        cbar.set_label("Amplitude (dB)")
-    except Exception as e:
-        print(f"Error loading spectrogram data from {txt_file}: {e}")
-        sys.exit(1)
+def generate_pdf(wav_file, spectrogram_file, output_pdf):
+    """Generate a PDF with waveform and spectrogram plots."""
+    sample_rate, audio_data = read_wav_file(wav_file)
+    spectrogram_data = read_spectrogram_file(spectrogram_file)
 
-def main():
+    fig, axs = plt.subplots(2, 1, figsize=(8, 10))
+    plot_waveform(sample_rate, audio_data, axs[0])
+    plot_spectrogram(spectrogram_data, axs[1])
+
+    plt.tight_layout()
+    plt.savefig(output_pdf)
+    plt.close()
+    print(f"Generated PDF: {output_pdf}")
+
+if __name__ == "__main__":
     if len(sys.argv) != 4:
         print("Usage: python3 spectshow.py <in_wav> <in_txt> <out_pdf>")
         sys.exit(1)
 
-    in_wav = sys.argv[1]
-    in_txt = sys.argv[2]
-    out_pdf = sys.argv[3]
+    wav_file = sys.argv[1]
+    spectrogram_file = sys.argv[2]
+    output_pdf = sys.argv[3]
 
-    # 創建 PDF 文件
-    with PdfPages(out_pdf) as pdf:
-        fig, axs = plt.subplots(2, 1, figsize=(10, 8))
-
-        # 繪製波形圖
-        plot_waveform(in_wav, axs[0])
-
-        # 繪製頻譜圖
-        plot_spectrogram(in_txt, axs[1])
-
-        # 調整布局並保存
-        plt.tight_layout()
-        pdf.savefig(fig)
-        plt.close(fig)
-
-    print(f"PDF saved to {out_pdf}")
-
-if __name__ == "__main__":
-    main()
+    try:
+        generate_pdf(wav_file, spectrogram_file, output_pdf)
+    except Exception as e:
+        print(f"Error: {e}")
 
