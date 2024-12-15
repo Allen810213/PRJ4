@@ -25,12 +25,16 @@ def plot_waveform(sample_rate, audio_data, ax):
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("Amplitude")
 
-def plot_spectrogram(spectrogram_data, ax):
-    """Plot spectrogram on the provided axes."""
-    ax.imshow(spectrogram_data, aspect='auto', origin='lower', cmap='viridis', extent=[0, spectrogram_data.shape[1], 0, spectrogram_data.shape[0]])
+def plot_spectrogram(sample_rate, spectrogram_data, ax, frame_interval_ms=10, fft_size=512):
+    """Plot spectrogram with frequency (Hz) and time (s) on the axes."""
+    num_frames, num_bins = spectrogram_data.shape
+    time_axis = np.linspace(0, num_frames * frame_interval_ms / 1000, num=num_frames)
+    freq_axis = np.linspace(0, sample_rate / 2, num=num_bins)
+
+    ax.imshow(spectrogram_data, aspect='auto', origin='lower', cmap='viridis', extent=[time_axis[0], time_axis[-1], freq_axis[0], freq_axis[-1]])
     ax.set_title("Spectrogram")
-    ax.set_xlabel("Frequency Bins")
-    ax.set_ylabel("Time Frames")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Frequency (Hz)")
 
 def generate_pdf(wav_file, spectrogram_file, output_pdf):
     """Generate a PDF with waveform and spectrogram plots."""
@@ -39,7 +43,7 @@ def generate_pdf(wav_file, spectrogram_file, output_pdf):
 
     fig, axs = plt.subplots(2, 1, figsize=(8, 10))
     plot_waveform(sample_rate, audio_data, axs[0])
-    plot_spectrogram(spectrogram_data, axs[1])
+    plot_spectrogram(sample_rate, spectrogram_data, axs[1])
 
     plt.tight_layout()
     plt.savefig(output_pdf)
